@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>기술국 근무표</title>
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="근무표">
+<meta name="theme-color" content="#2f6f5e">
+<link rel="manifest" href="manifest.json">
+<style>
+  :root{
+    --bg:#f6f7f5; --card:#ffffff; --border:#e2e4e0; --border-strong:#c9ccc6;
+    --text:#20221f; --text-2:#5b5e58; --text-3:#8b8e87;
+    --accent:#2f6f5e; --accent-bg:#e3efec;
+    --gray:#e7e7e3; --danger:#b3492f;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    padding-bottom:calc(76px + env(safe-area-inset-bottom));}
+  header{padding:18px 16px 8px;}
+  header h1{font-size:19px;font-weight:600;margin:0;}
+  header p{font-size:12px;color:var(--text-2);margin:3px 0 0;}
+  main{max-width:480px;margin:0 auto;padding:0 16px;}
+  .tabpage{display:none;}
+  .tabpage.active{display:block;}
+
+  .row{display:flex;gap:8px;align-items:center;margin:10px 0;}
+  select,input[type=date],input[type=number]{
+    width:100%;padding:10px 11px;border-radius:10px;border:1px solid var(--border-strong);
+    background:var(--card);font-size:15px;color:var(--text);
+  }
+  .row select,.row input[type=date],.row input[type=number]{flex:1;min-width:0;width:0;}
+  #lookupDate{flex:0 1 160px;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;
+    padding:14px 16px;margin:10px 0;}
+  .card h3{margin:0 0 8px;font-size:14px;font-weight:600;color:var(--text-2);}
+  .badgeday{display:flex;align-items:baseline;gap:8px;margin-bottom:4px;}
+  .badgeday .num{font-size:22px;font-weight:600;}
+  .badgeday .wd{font-size:13px;color:var(--text-2);}
+  .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;
+    background:var(--accent-bg);color:var(--accent);margin-left:4px;}
+  .tag.off{background:#f1e4e0;color:var(--danger);}
+
+  .grouplabel{font-size:12px;color:var(--text-3);margin:12px 0 4px;}
+  .person-row{display:flex;justify-content:space-between;align-items:center;
+    padding:9px 0;border-bottom:1px solid var(--border);}
+  .person-row:last-child{border-bottom:none;}
+  .person-row .name{font-size:14px;}
+  .code{font-size:14px;font-weight:600;padding:3px 10px;border-radius:8px;min-width:44px;
+    text-align:center;}
+  .code.AD{background:#dcebf7;color:#1a5a8a;}
+  .code.DP{background:#dcf0e6;color:#1a6b4c;}
+  .code.R{background:#faecd6;color:#8a5a15;}
+  .code.D{background:#ece8e0;color:#7a7566;}
+  .code.M{background:#f5ded4;color:#8a4322;}
+  .code.N{background:#e9e3f5;color:#4c358a;}
+  .code.DN{background:#f5dbe6;color:#8a2d5a;}
+  .code.dash{background:transparent;color:var(--text-3);}
+  .code.blank{background:transparent;color:var(--text-3);}
+  select.editselect{flex:0 0 auto;width:auto;padding:5px 8px;font-size:13px;border-radius:8px;
+    border:1px solid var(--border-strong);background:var(--card);color:var(--text);}
+
+  .weekday-header{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:10px;}
+  .weekday-header span{text-align:center;font-size:12px;color:var(--text-3);}
+  .weekday-header span:first-child{color:var(--danger);}
+  .weekday-header span:last-child{color:#2a5c8a;}
+
+  .daystrip{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:58px;gap:6px;margin-top:6px;}
+  .daycell{border-radius:9px;padding:6px 2px;text-align:center;background:var(--card);
+    border:1px solid var(--border);height:100%;overflow:hidden;box-sizing:border-box;}
+  .daycell.empty{background:transparent;border:none;}
+  .daycell .d{font-size:10px;color:var(--text-3);}
+  .daycell .c{font-size:13px;font-weight:600;margin-top:2px;}
+  .daycell .bw{font-size:8px;color:var(--accent);margin-top:1px;line-height:1.1;}
+  .daycell.weekend{background:var(--gray);}
+  .daycell.weekend .d{color:var(--danger);font-weight:700;}
+  .daycell.today{outline:2px solid var(--accent);}
+
+  .monthbar{display:flex;align-items:center;gap:8px;margin:10px 0;}
+  .monthbar .iconbtn{flex:0 0 auto;width:40px;height:40px;border-radius:10px;border:1px solid var(--border-strong);
+    background:var(--card);font-size:18px;color:var(--text-2);}
+  .monthbar .label{flex:1;text-align:center;font-weight:600;font-size:16px;}
+  .todaybtn{flex:0 0 auto;padding:10px 14px;border-radius:10px;border:1px solid var(--border-strong);
+    background:var(--card);font-size:14px;color:var(--accent);font-family:inherit;}
+
+  .chip-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .chip{font-size:12px;padding:5px 10px;border-radius:999px;border:1px solid var(--border-strong);
+    background:var(--card);display:flex;align-items:center;gap:6px;}
+  .chip button{border:none;background:none;color:var(--danger);font-size:13px;cursor:pointer;padding:0;}
+
+  .toggle-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;
+    border-bottom:1px solid var(--border);}
+  .toggle-row:last-child{border-bottom:none;}
+  .switch{position:relative;width:44px;height:26px;flex-shrink:0;}
+  .switch input{opacity:0;width:0;height:0;}
+  .slider{position:absolute;inset:0;background:var(--border-strong);border-radius:999px;
+    transition:.15s;cursor:pointer;}
+  .slider:before{content:"";position:absolute;width:20px;height:20px;left:3px;top:3px;
+    background:white;border-radius:50%;transition:.15s;}
+  input:checked + .slider{background:var(--accent);}
+  input:checked + .slider:before{transform:translateX(18px);}
+
+  button.primary{width:100%;padding:11px;border-radius:10px;border:none;
+    background:var(--accent);color:white;font-size:14px;font-weight:600;margin-top:6px;}
+  .muted{font-size:12px;color:var(--text-3);margin-top:6px;line-height:1.5;}
+
+  nav.tabs{position:fixed;bottom:0;left:0;right:0;background:var(--card);
+    border-top:1px solid var(--border);display:flex;max-width:480px;margin:0 auto;
+    padding-bottom:env(safe-area-inset-bottom);}
+  nav.tabs button{flex:1;padding:11px 0 9px;background:none;border:none;font-size:12px;
+    color:var(--text-3);}
+  nav.tabs button.active{color:var(--accent);font-weight:600;}
+  nav.tabs .ic{display:block;font-size:18px;margin-bottom:2px;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>기술국 근무표</h1>
+  <p>자동 생성 로직 기반 · 로컬 저장</p>
+</header>
+
+<main>
+
+  <!-- 날짜로 확인 -->
+  <div class="tabpage active" id="tab-date">
+    <div class="row">
+      <input type="date" id="lookupDate">
+      <button class="todaybtn" id="todayBtnDate" onclick="goToToday()">오늘</button>
+      <button class="todaybtn" id="editSaveBtn" onclick="toggleEditSave()">수정</button>
+    </div>
+    <div id="dateResult"></div>
+  </div>
+
+  <!-- 월간 보기 -->
+  <div class="tabpage" id="tab-month">
+    <div class="monthbar">
+      <button class="iconbtn" onclick="shiftMonth(-1)" aria-label="이전 달">&#8249;</button>
+      <div class="label" id="monthLabel"></div>
+      <button class="iconbtn" onclick="shiftMonth(1)" aria-label="다음 달">&#8250;</button>
+      <button class="todaybtn" onclick="goToday()">오늘</button>
+    </div>
+    <div class="row" style="margin-top:0;">
+      <select id="personSelect"></select>
+    </div>
+    <div class="card">
+      <div class="weekday-header">
+        <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+      </div>
+      <div class="daystrip" id="monthStrip"></div>
+    </div>
+  </div>
+
+  <!-- 설정 -->
+  <div class="tabpage" id="tab-settings">
+    <div class="card">
+      <h3>기본으로 볼 근무자</h3>
+      <select id="favoritePersonSelect"></select>
+      <div class="muted">여기서 지정하면 월간 보기를 열 때마다 이 근무자의 근무표가 기본으로 표시됩니다.</div>
+    </div>
+
+    <div class="card">
+      <h3>이 달 설정</h3>
+      <div class="row">
+        <select id="settingsYearInput"></select>
+        <select id="settingsMonthNumSelect"></select>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div style="font-size:14px;">주말 근무 (뉴스/송출)</div>
+          <div class="muted" style="margin:2px 0 0;">켜면 토요일 전원 휴무, 일요일엔 DP 순번자만 근무</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="weekendNewsToggle"><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div style="font-size:14px;">격주 금요일 휴무 표시</div>
+          <div class="muted" style="margin:2px 0 0;">2·4번째 금요일을 뉴스/송출팀 휴무로 표시</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="biweeklyToggle"><span class="slider"></span></label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>지정 휴일 추가</h3>
+      <div class="row">
+        <input type="date" id="localHolidayDate">
+        <button class="todaybtn" style="flex:0 0 auto;padding:9px 14px;" onclick="clearHolidayDate()">취소</button>
+        <button class="primary" style="width:auto;padding:9px 14px;margin:0;flex:0 0 auto;" onclick="addLocalHoliday()">추가</button>
+      </div>
+      <div class="chip-list" id="localHolidayChips"></div>
+      <div class="muted">법정 공휴일은 별도 설정 없이 자동으로 반영됩니다.</div>
+    </div>
+  </div>
+
+</main>
+
+<nav class="tabs">
+  <button data-tab="tab-date" class="active" onclick="switchTab('tab-date')"><span class="ic">&#128197;</span>날짜 확인</button>
+  <button data-tab="tab-month" onclick="switchTab('tab-month')"><span class="ic">&#128203;</span>월간 보기</button>
+  <button data-tab="tab-settings" onclick="switchTab('tab-settings')"><span class="ic">&#9881;</span>설정</button>
+</nav>
+
+<script>
+/* ===================== 서비스 워커 등록 + 적극적 업데이트 확인 ===================== */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then((reg) => {
+      // 브라우저가 알아서 확인해줄 때까지 기다리지 않고, 열릴 때마다 직접 새 버전이 있는지 확인
+      reg.update().catch(() => {}); // 오프라인 등으로 확인이 실패해도 조용히 무시 (앱 사용엔 지장 없음)
+      // 백그라운드에 있다가 다시 화면으로 돌아올 때도 확인 (폰에서 "닫았다 열기"의 실제 동작 방식 보완)
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') reg.update();
+      });
+    }).catch(() => {
+      // 서비스 워커 파일이 없거나(sw.js 미업로드) 등록 실패해도 앱 자체 기능에는 영향 없음
+    });
+
+    // 새 서비스 워커가 활성화되어 컨트롤이 바뀌면, 화면을 한 번 새로고침해서 즉시 반영
+    let refreshingAfterUpdate = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshingAfterUpdate) return;
+      refreshingAfterUpdate = true;
+      window.location.reload();
+    });
+  });
+}
+
+/* ===================== 홈 화면 실행 모드에서 뒤로가기 = 앱 종료 ===================== */
+(function setupBackToExit() {
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true;
+  if (!isStandalone) return; // 일반 브라우저 탭에서는 평소처럼 동작
+
+  history.pushState({ appRoot: true }, '', location.href);
+  window.addEventListener('popstate', function () {
+    // 히스토리가 이 앱 하나뿐인 상태(홈 화면 실행)에서 뒤로가기 시 탭 종료 시도
+    window.close();
+    // 일부 환경에서 close()가 막히는 경우, 빈 화면으로 빠지지 않도록 상태를 다시 채워둠
+    history.pushState({ appRoot: true }, '', location.href);
+  });
+})();
+
+/* ===================== 근무 로테이션 로직 (기존 VBA 매크로를 그대로 이식) ===================== */
+const REF_DATE = new Date(2017, 6, 1); // 기준일 2017-07-01 (절대 변경 금지)
+
+const GROUP_NAMES = {
+  songchul: ["이석용", "성백인", "황인조"],
+  news: ["김영훈", "안경재", "김정림", "신성원"],
+  md: ["남궁옥", "박미숙", "홍수영"],
+};
+
+const WEEKDAY_KR = ["일", "월", "화", "수", "목", "금", "토"]; // Date.getDay() 인덱스
+
+const KR_HOLIDAYS = {"2024-01-01": "신정연휴", "2024-02-10": "설날", "2024-02-09": "설날 전날", "2024-02-11": "설날 다음날", "2024-03-01": "삼일절", "2024-05-15": "부처님오신날", "2024-05-05": "어린이날", "2024-06-06": "현충일", "2024-08-15": "광복절", "2024-10-03": "개천절", "2024-10-09": "한글날", "2024-09-17": "추석", "2024-09-16": "추석 전날", "2024-09-18": "추석 다음날", "2024-12-25": "기독탄신일", "2024-04-10": "국회의원 선거일", "2024-02-12": "설날 대체 휴일", "2024-05-06": "어린이날 대체 휴일", "2024-10-01": "국군의 날", "2025-01-01": "신정연휴", "2025-01-29": "설날", "2025-01-28": "설날 전날", "2025-01-30": "설날 다음날", "2025-03-01": "삼일절", "2025-05-05": "부처님오신날; 어린이날", "2025-06-06": "현충일", "2025-08-15": "광복절", "2025-10-03": "개천절", "2025-10-09": "한글날", "2025-10-06": "추석", "2025-10-05": "추석 전날", "2025-10-07": "추석 다음날", "2025-12-25": "기독탄신일", "2025-03-03": "삼일절 대체 휴일", "2025-05-06": "부처님오신날 대체 휴일; 어린이날 대체 휴일", "2025-10-08": "추석 대체 휴일", "2025-01-27": "임시공휴일", "2025-06-03": "대통령 선거일", "2026-01-01": "신정연휴", "2026-02-17": "설날", "2026-02-16": "설날 전날", "2026-02-18": "설날 다음날", "2026-03-01": "삼일절", "2026-05-24": "부처님오신날", "2026-05-01": "노동절", "2026-05-05": "어린이날", "2026-06-06": "현충일", "2026-07-17": "제헌절", "2026-08-15": "광복절", "2026-10-03": "개천절", "2026-10-09": "한글날", "2026-09-25": "추석", "2026-09-24": "추석 전날", "2026-09-26": "추석 다음날", "2026-12-25": "기독탄신일", "2026-06-03": "지방선거일", "2026-03-02": "삼일절 대체 휴일", "2026-05-25": "부처님오신날 대체 휴일", "2026-08-17": "광복절 대체 휴일", "2026-10-05": "개천절 대체 휴일", "2027-01-01": "신정연휴", "2027-02-07": "설날", "2027-02-06": "설날 전날", "2027-02-08": "설날 다음날", "2027-03-01": "삼일절", "2027-05-13": "부처님오신날", "2027-05-01": "노동절", "2027-05-05": "어린이날", "2027-06-06": "현충일", "2027-07-17": "제헌절", "2027-08-15": "광복절", "2027-10-03": "개천절", "2027-10-09": "한글날", "2027-09-15": "추석", "2027-09-14": "추석 전날", "2027-09-16": "추석 다음날", "2027-12-25": "기독탄신일", "2027-02-09": "설날 대체 휴일", "2027-05-03": "노동절 대체 휴일", "2027-07-19": "제헌절 대체 휴일", "2027-08-16": "광복절 대체 휴일", "2027-10-04": "개천절 대체 휴일", "2027-10-11": "한글날 대체 휴일", "2027-12-27": "기독탄신일 대체 휴일", "2028-01-01": "신정연휴", "2028-01-27": "설날", "2028-01-26": "설날 전날", "2028-01-28": "설날 다음날", "2028-03-01": "삼일절", "2028-05-02": "부처님오신날", "2028-05-01": "노동절", "2028-05-05": "어린이날", "2028-06-06": "현충일", "2028-07-17": "제헌절", "2028-08-15": "광복절", "2028-10-03": "개천절; 추석", "2028-10-09": "한글날", "2028-10-02": "추석 전날", "2028-10-04": "추석 다음날", "2028-12-25": "기독탄신일", "2028-04-12": "국회의원 선거일", "2028-10-05": "추석 대체 휴일", "2029-01-01": "신정연휴", "2029-02-13": "설날", "2029-02-12": "설날 전날", "2029-02-14": "설날 다음날", "2029-03-01": "삼일절", "2029-05-20": "부처님오신날", "2029-05-01": "노동절", "2029-05-05": "어린이날", "2029-06-06": "현충일", "2029-07-17": "제헌절", "2029-08-15": "광복절", "2029-10-03": "개천절", "2029-10-09": "한글날", "2029-09-22": "추석", "2029-09-21": "추석 전날", "2029-09-23": "추석 다음날", "2029-12-25": "기독탄신일", "2029-05-07": "어린이날 대체 휴일", "2029-05-21": "부처님오신날 대체 휴일", "2029-09-24": "추석 대체 휴일", "2030-01-01": "신정연휴", "2030-02-03": "설날", "2030-02-02": "설날 전날", "2030-02-04": "설날 다음날", "2030-03-01": "삼일절", "2030-05-09": "부처님오신날", "2030-05-01": "노동절", "2030-05-05": "어린이날", "2030-06-06": "현충일", "2030-07-17": "제헌절", "2030-08-15": "광복절", "2030-10-03": "개천절", "2030-10-09": "한글날", "2030-09-12": "추석", "2030-09-11": "추석 전날", "2030-09-13": "추석 다음날", "2030-12-25": "기독탄신일", "2030-04-03": "대통령 선거일", "2030-06-12": "지방선거일", "2030-02-05": "설날 대체 휴일", "2030-05-06": "어린이날 대체 휴일", "2031-01-01": "신정연휴", "2031-01-23": "설날", "2031-01-22": "설날 전날", "2031-01-24": "설날 다음날", "2031-03-01": "삼일절", "2031-05-28": "부처님오신날", "2031-05-01": "노동절", "2031-05-05": "어린이날", "2031-06-06": "현충일", "2031-07-17": "제헌절", "2031-08-15": "광복절", "2031-10-03": "개천절", "2031-10-09": "한글날", "2031-10-01": "추석", "2031-09-30": "추석 전날", "2031-10-02": "추석 다음날", "2031-12-25": "기독탄신일", "2031-03-03": "삼일절 대체 휴일", "2032-01-01": "신정연휴", "2032-02-11": "설날", "2032-02-10": "설날 전날", "2032-02-12": "설날 다음날", "2032-03-01": "삼일절", "2032-05-16": "부처님오신날", "2032-05-01": "노동절", "2032-05-05": "어린이날", "2032-06-06": "현충일", "2032-07-17": "제헌절", "2032-08-15": "광복절", "2032-10-03": "개천절", "2032-10-09": "한글날", "2032-09-19": "추석", "2032-09-18": "추석 전날", "2032-09-20": "추석 다음날", "2032-12-25": "기독탄신일", "2032-04-14": "국회의원 선거일", "2032-05-03": "노동절 대체 휴일", "2032-05-17": "부처님오신날 대체 휴일", "2032-07-19": "제헌절 대체 휴일", "2032-08-16": "광복절 대체 휴일", "2032-09-21": "추석 대체 휴일", "2032-10-04": "개천절 대체 휴일", "2032-10-11": "한글날 대체 휴일", "2032-12-27": "기독탄신일 대체 휴일", "2033-01-01": "신정연휴", "2033-01-31": "설날", "2033-01-30": "설날 전날", "2033-02-01": "설날 다음날", "2033-03-01": "삼일절", "2033-05-06": "부처님오신날", "2033-05-01": "노동절", "2033-05-05": "어린이날", "2033-06-06": "현충일", "2033-07-17": "제헌절", "2033-08-15": "광복절", "2033-10-03": "개천절", "2033-10-09": "한글날", "2033-09-08": "추석", "2033-09-07": "추석 전날", "2033-09-09": "추석 다음날", "2033-12-25": "기독탄신일", "2033-02-02": "설날 대체 휴일", "2033-05-02": "노동절 대체 휴일", "2033-07-18": "제헌절 대체 휴일", "2033-10-10": "한글날 대체 휴일", "2033-12-26": "기독탄신일 대체 휴일", "2034-01-01": "신정연휴", "2034-02-19": "설날", "2034-02-18": "설날 전날", "2034-02-20": "설날 다음날", "2034-03-01": "삼일절", "2034-05-25": "부처님오신날", "2034-05-01": "노동절", "2034-05-05": "어린이날", "2034-06-06": "현충일", "2034-07-17": "제헌절", "2034-08-15": "광복절", "2034-10-03": "개천절", "2034-10-09": "한글날", "2034-09-27": "추석", "2034-09-26": "추석 전날", "2034-09-28": "추석 다음날", "2034-12-25": "기독탄신일", "2034-06-14": "지방선거일", "2034-02-21": "설날 대체 휴일", "2035-01-01": "신정연휴", "2035-02-08": "설날", "2035-02-07": "설날 전날", "2035-02-09": "설날 다음날", "2035-03-01": "삼일절", "2035-05-15": "부처님오신날", "2035-05-01": "노동절", "2035-05-05": "어린이날", "2035-06-06": "현충일", "2035-07-17": "제헌절", "2035-08-15": "광복절", "2035-10-03": "개천절", "2035-10-09": "한글날", "2035-09-16": "추석", "2035-09-15": "추석 전날", "2035-09-17": "추석 다음날", "2035-12-25": "기독탄신일", "2035-04-04": "대통령 선거일", "2035-05-07": "어린이날 대체 휴일", "2035-09-18": "추석 대체 휴일", "2036-01-01": "신정연휴", "2036-01-28": "설날", "2036-01-27": "설날 전날", "2036-01-29": "설날 다음날", "2036-03-01": "삼일절", "2036-05-03": "부처님오신날", "2036-05-01": "노동절", "2036-05-05": "어린이날", "2036-06-06": "현충일", "2036-07-17": "제헌절", "2036-08-15": "광복절", "2036-10-03": "개천절; 추석 전날", "2036-10-09": "한글날", "2036-10-04": "추석", "2036-10-05": "추석 다음날", "2036-12-25": "기독탄신일", "2036-04-09": "국회의원 선거일", "2036-01-30": "설날 대체 휴일", "2036-03-03": "삼일절 대체 휴일", "2036-05-06": "부처님오신날 대체 휴일", "2036-10-06": "추석 대체 휴일", "2036-10-07": "추석 대체 휴일", "2037-01-01": "신정연휴", "2037-02-15": "설날", "2037-02-14": "설날 전날", "2037-02-16": "설날 다음날", "2037-03-01": "삼일절", "2037-05-22": "부처님오신날", "2037-05-01": "노동절", "2037-05-05": "어린이날", "2037-06-06": "현충일", "2037-07-17": "제헌절", "2037-08-15": "광복절", "2037-10-03": "개천절", "2037-10-09": "한글날", "2037-09-24": "추석", "2037-09-23": "추석 전날", "2037-09-25": "추석 다음날", "2037-12-25": "기독탄신일", "2037-02-17": "설날 대체 휴일", "2037-03-02": "삼일절 대체 휴일", "2037-08-17": "광복절 대체 휴일", "2037-10-05": "개천절 대체 휴일", "2038-01-01": "신정연휴", "2038-02-04": "설날", "2038-02-03": "설날 전날", "2038-02-05": "설날 다음날", "2038-03-01": "삼일절", "2038-05-11": "부처님오신날", "2038-05-01": "노동절", "2038-05-05": "어린이날", "2038-06-06": "현충일", "2038-07-17": "제헌절", "2038-08-15": "광복절", "2038-10-03": "개천절", "2038-10-09": "한글날", "2038-09-13": "추석", "2038-09-12": "추석 전날", "2038-09-14": "추석 다음날", "2038-12-25": "기독탄신일", "2038-06-02": "지방선거일", "2038-05-03": "노동절 대체 휴일", "2038-07-19": "제헌절 대체 휴일", "2038-08-16": "광복절 대체 휴일", "2038-09-15": "추석 대체 휴일", "2038-10-04": "개천절 대체 휴일", "2038-10-11": "한글날 대체 휴일", "2038-12-27": "기독탄신일 대체 휴일", "2039-01-01": "신정연휴", "2039-01-24": "설날", "2039-01-23": "설날 전날", "2039-01-25": "설날 다음날", "2039-03-01": "삼일절", "2039-04-30": "부처님오신날", "2039-05-01": "노동절", "2039-05-05": "어린이날", "2039-06-06": "현충일", "2039-07-17": "제헌절", "2039-08-15": "광복절", "2039-10-03": "개천절; 추석 다음날", "2039-10-09": "한글날", "2039-10-02": "추석", "2039-10-01": "추석 전날", "2039-12-25": "기독탄신일", "2039-01-26": "설날 대체 휴일", "2039-05-02": "부처님오신날 대체 휴일", "2039-05-03": "노동절 대체 휴일", "2039-07-18": "제헌절 대체 휴일", "2039-10-04": "추석 대체 휴일", "2039-10-05": "추석 대체 휴일", "2039-10-10": "한글날 대체 휴일", "2039-12-26": "기독탄신일 대체 휴일", "2040-01-01": "신정연휴", "2040-02-12": "설날", "2040-02-11": "설날 전날", "2040-02-13": "설날 다음날", "2040-03-01": "삼일절", "2040-05-18": "부처님오신날", "2040-05-01": "노동절", "2040-05-05": "어린이날", "2040-06-06": "현충일", "2040-07-17": "제헌절", "2040-08-15": "광복절", "2040-10-03": "개천절", "2040-10-09": "한글날", "2040-09-21": "추석", "2040-09-20": "추석 전날", "2040-09-22": "추석 다음날", "2040-12-25": "기독탄신일", "2040-04-11": "국회의원 선거일", "2040-04-04": "대통령 선거일", "2040-02-14": "설날 대체 휴일", "2040-05-07": "어린이날 대체 휴일"};
+
+function daysBetween(a, b) {
+  return Math.round((b - a) / 86400000);
+}
+
+function pad2(n) { return String(n).padStart(2, "0"); }
+function isoDate(y, m, d) { return `${y}-${pad2(m)}-${pad2(d)}`; }
+
+function mod(n, m) { return ((n % m) + m) % m; }
+
+function getSettings(year, month) {
+  const key = `settings:${year}-${pad2(month)}`;
+  let raw = null;
+  try { raw = localStorage.getItem(key); } catch (e) {}
+  const defaults = { weekendNews: false, biweeklyFridayOff: false, localHolidays: [] };
+  if (!raw) return defaults;
+  try { return Object.assign(defaults, JSON.parse(raw)); } catch (e) { return defaults; }
+}
+function saveSettings(year, month, settings) {
+  const key = `settings:${year}-${pad2(month)}`;
+  try { localStorage.setItem(key, JSON.stringify(settings)); } catch (e) {}
+}
+
+// 특정 날짜에 대한 수동 근무 수정(자동 계산을 덮어씀)
+function getOverride(iso) {
+  try {
+    const raw = localStorage.getItem(`override:${iso}`);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) { return {}; }
+}
+function saveOverride(iso, ov) {
+  try {
+    if (Object.keys(ov).length === 0) localStorage.removeItem(`override:${iso}`);
+    else localStorage.setItem(`override:${iso}`, JSON.stringify(ov));
+  } catch (e) {}
+}
+
+const GROUP_OPTIONS = {
+  songchul: [["자동", "__auto__"], ["-", "-"], ["M", "M"], ["N", "N"], ["DN", "DN"]],
+  news: [["자동", "__auto__"], ["AD", "AD"], ["DP", "DP"], ["R", "R"], ["D", "D"], ["휴무", ""]],
+  md: [["자동", "__auto__"], ["AD", "AD"], ["DP", "DP"], ["-", "-"]],
+};
+
+function daysInMonth(year, month) { return new Date(year, month, 0).getDate(); }
+
+// 하루치 근무 계산
+function computeDay(year, month, day, settings) {
+  const d = new Date(year, month - 1, day);
+  const wd = d.getDay();
+  const wname = WEEKDAY_KR[wd];
+  const isWeekend = (wd === 0 || wd === 6);
+  const difference = daysBetween(REF_DATE, new Date(year, month - 1, 1));
+
+  // 송출실 (3인)
+  const tx = mod(day + difference + 1, 3);
+  let songchul = ({1: ["-", "M", "N"], 2: ["N", "-", "M"], 0: ["M", "N", "-"]})[tx];
+  if (isWeekend) songchul = songchul.map(v => v === "N" ? "DN" : v);
+
+  // 뉴스/송출 (4인)
+  const j = mod(day + difference, 4);
+  let news = ({
+    0: ["AD", "R", "D", "DP"],
+    1: ["R", "D", "DP", "AD"],
+    2: ["D", "DP", "AD", "R"],
+    3: ["DP", "AD", "R", "D"],
+  })[j];
+  if (isWeekend) {
+    if (!settings.weekendNews) {
+      news = news.map(() => "");
+    } else if (wd === 6) { // 토요일
+      news = news.map(() => "");
+    } else if (wd === 0) { // 일요일: DP만 유지
+      news = news.map(v => v === "DP" ? v : "");
+    }
+  }
+
+  // MD (3인)
+  const radio = mod(day + difference + 1, 3);
+  let md = ({0: ["AD", "DP", "-"], 1: ["-", "AD", "DP"], 2: ["DP", "-", "AD"]})[radio];
+
+  // 공휴일 (법정 + 지정)
+  const iso = isoDate(year, month, day);
+  const isStatutory = !!KR_HOLIDAYS[iso];
+  const isLocal = settings.localHolidays.includes(iso);
+  const isHoliday = isStatutory || isLocal;
+  if (isHoliday) {
+    news = news.map(v => (v === "R" || v === "D") ? "" : v);
+    if (md[0] === "R" || md[0] === "D") md[0] = "";
+  }
+
+  // 수동 수정(저장된 개별 근무 변경) 적용 - 항상 최종 우선 적용
+  const manualOverride = getOverride(iso);
+  Object.keys(manualOverride).forEach(key => {
+    const [g, i] = key.split(":");
+    const idx = Number(i);
+    if (g === "songchul") songchul[idx] = manualOverride[key];
+    else if (g === "news") news[idx] = manualOverride[key];
+    else if (g === "md") md[idx] = manualOverride[key];
+  });
+
+  return { day, wname, isWeekend, isHoliday, holidayName: KR_HOLIDAYS[iso] || null,
+           songchul, news, md, hasOverride: Object.keys(manualOverride).length > 0 };
+}
+
+function monthData(year, month, settings) {
+  const n = daysInMonth(year, month);
+  const out = [];
+  for (let day = 1; day <= n; day++) out.push(computeDay(year, month, day, settings));
+
+  // 격주 금요일 (2,4번째) 표시
+  if (settings.biweeklyFridayOff) {
+    const fridays = out.filter(r => r.wname === "금").map(r => r.day);
+    const marks = [fridays[1], fridays[3]].filter(Boolean);
+    out.forEach(r => { r.biweeklyOff = marks.includes(r.day); });
+  } else {
+    out.forEach(r => { r.biweeklyOff = false; });
+  }
+  return out;
+}
+
+/* ===================== UI ===================== */
+function switchTab(id) {
+  const current = document.querySelector(".tabpage.active");
+  if (current && current.id === "tab-date" && id !== "tab-date" && editMode) {
+    cancelEdit();
+    renderDateResult();
+  }
+  document.querySelectorAll(".tabpage").forEach(el => el.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  document.querySelectorAll("nav.tabs button").forEach(b => b.classList.toggle("active", b.dataset.tab === id));
+  if (id === "tab-month") renderMonthStrip(); // 수동 수정 내용이 최신으로 반영되도록 재렌더링
+}
+
+/* ===================== 좌우 스와이프로 탭 전환 ===================== */
+(function setupSwipeTabs() {
+  const TAB_ORDER = ["tab-date", "tab-month", "tab-settings"];
+  const mainEl = document.querySelector("main");
+  let startX = 0, startY = 0, tracking = false;
+
+  mainEl.addEventListener("touchstart", (e) => {
+    if (e.touches.length !== 1) return;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    tracking = true;
+  }, { passive: true });
+
+  mainEl.addEventListener("touchend", (e) => {
+    if (!tracking) return;
+    tracking = false;
+    const endX = e.changedTouches[0].clientX;
+    const endY = e.changedTouches[0].clientY;
+    const dx = endX - startX;
+    const dy = endY - startY;
+    const THRESHOLD = 60;
+    if (Math.abs(dx) < THRESHOLD || Math.abs(dx) < Math.abs(dy) * 1.3) return;
+
+    const activeId = document.querySelector(".tabpage.active").id;
+    const idx = TAB_ORDER.indexOf(activeId);
+    if (idx === -1) return;
+    if (dx < 0 && idx < TAB_ORDER.length - 1) {
+      switchTab(TAB_ORDER[idx + 1]); // 왼쪽으로 밀면 다음 탭
+    } else if (dx > 0 && idx > 0) {
+      switchTab(TAB_ORDER[idx - 1]); // 오른쪽으로 밀면 이전 탭
+    }
+  }, { passive: true });
+})();
+
+function codeClass(code) {
+  if (!code) return "blank";
+  if (code === "-") return "dash";
+  return code;
+}
+
+let editMode = false;
+
+function cancelEdit() {
+  if (!editMode) return;
+  editMode = false;
+  const btn = document.getElementById("editSaveBtn");
+  if (btn) btn.textContent = "수정";
+  const dateInput = document.getElementById("lookupDate");
+  if (dateInput) dateInput.disabled = false;
+  const todayBtn = document.getElementById("todayBtnDate");
+  if (todayBtn) todayBtn.disabled = false;
+}
+
+function toggleEditSave() {
+  const val = document.getElementById("lookupDate").value;
+  if (!val) return;
+  if (!editMode) {
+    editMode = true;
+    document.getElementById("editSaveBtn").textContent = "저장";
+    document.getElementById("lookupDate").disabled = true;
+    document.getElementById("todayBtnDate").disabled = true;
+    renderDateResult();
+  } else {
+    const ov = getOverride(val);
+    Object.keys(GROUP_NAMES).forEach(group => {
+      GROUP_NAMES[group].forEach((name, idx) => {
+        const sel = document.getElementById(`edit-${group}-${idx}`);
+        if (!sel) return;
+        const key = `${group}:${idx}`;
+        if (sel.value === "__auto__") delete ov[key];
+        else ov[key] = sel.value;
+      });
+    });
+    saveOverride(val, ov);
+    cancelEdit();
+    renderDateResult();
+  }
+}
+
+function goToToday() {
+  cancelEdit();
+  const today = new Date();
+  document.getElementById("lookupDate").value =
+    `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-${pad2(today.getDate())}`;
+  renderDateResult();
+}
+
+function renderDateResult() {
+  const val = document.getElementById("lookupDate").value;
+  const box = document.getElementById("dateResult");
+  if (!val) { box.innerHTML = ""; return; }
+  const [y, m, d] = val.split("-").map(Number);
+  const settings = getSettings(y, m);
+  const rec = computeDay(y, m, d, settings);
+
+  let html = `<div class="card">
+    <div class="badgeday">
+      <span class="num">${d}</span><span class="wd">${rec.wname}요일</span>
+      ${rec.isWeekend ? '<span class="tag off">주말</span>' : ''}
+      ${rec.isHoliday ? `<span class="tag off">${rec.holidayName || '휴일'}</span>` : ''}
+      ${rec.hasOverride ? `<span class="tag off">수정됨</span>` : ''}
+    </div>`;
+
+  html += renderGroup("송출실", GROUP_NAMES.songchul, rec.songchul, "songchul", editMode);
+  html += renderGroup("뉴스 / 송출", GROUP_NAMES.news, rec.news, "news", editMode);
+  html += renderGroup("MD", GROUP_NAMES.md, rec.md, "md", editMode);
+  html += `</div>`;
+  box.innerHTML = html;
+}
+
+function renderGroup(label, names, codes, group, edit) {
+  let html = `<div class="grouplabel">${label}</div>`;
+  names.forEach((name, i) => {
+    const c = codes[i];
+    if (edit) {
+      const options = GROUP_OPTIONS[group].map(([lab, v]) =>
+        `<option value="${v}" ${v === c ? "selected" : ""}>${lab}</option>`
+      ).join("");
+      html += `<div class="person-row"><span class="name">${name}</span>
+        <select class="editselect" id="edit-${group}-${i}">${options}</select></div>`;
+    } else {
+      html += `<div class="person-row"><span class="name">${name}</span>
+        <span class="code ${codeClass(c)}">${c ? c : '휴무'}</span></div>`;
+    }
+  });
+  return html;
+}
+
+function getFavoritePerson() {
+  try { return localStorage.getItem("favoritePerson") || "news:2"; } catch (e) { return "news:2"; }
+}
+function setFavoritePerson(key) {
+  try { localStorage.setItem("favoritePerson", key); } catch (e) {}
+}
+
+// 월간 보기에서 현재 보고 있는 연/월 (화살표로 이동)
+const viewState = { year: null, month: null };
+
+function goToday() {
+  const today = new Date();
+  viewState.year = today.getFullYear();
+  viewState.month = today.getMonth() + 1;
+  renderMonthStrip();
+}
+
+function shiftMonth(delta) {
+  let y = viewState.year, m = viewState.month + delta;
+  if (m < 1) { m = 12; y -= 1; }
+  if (m > 12) { m = 1; y += 1; }
+  viewState.year = y; viewState.month = m;
+  renderMonthStrip();
+}
+
+function renderMonthStrip() {
+  const y = viewState.year, m = viewState.month;
+  const personKey = document.getElementById("personSelect").value; // "news:0" 등
+  const [group, idxStr] = personKey.split(":");
+  const idx = Number(idxStr);
+  const settings = getSettings(y, m);
+  const data = monthData(y, m, settings);
+
+  document.getElementById("monthLabel").textContent = `${y}년 ${m}월`;
+
+  // 설정 탭의 "이 달 설정" 연/월도 월간 보기와 동기화
+  const settingsYearEl = document.getElementById("settingsYearInput");
+  const settingsMonthEl = document.getElementById("settingsMonthNumSelect");
+  if (settingsYearEl && settingsMonthEl) {
+    settingsYearEl.value = y;
+    settingsMonthEl.value = m;
+    renderSettings();
+  }
+
+  const today = new Date();
+  const strip = document.getElementById("monthStrip");
+  strip.innerHTML = "";
+
+  // 1일이 무슨 요일인지에 맞춰 앞쪽에 빈 칸을 채워 요일 헤더와 정렬
+  const leadBlanks = new Date(y, m - 1, 1).getDay(); // 0=일 ... 6=토
+  for (let i = 0; i < leadBlanks; i++) {
+    const blank = document.createElement("div");
+    blank.className = "daycell empty";
+    strip.appendChild(blank);
+  }
+
+  data.forEach(rec => {
+    const code = rec[group][idx];
+    const isBiweeklyOff = rec.biweeklyOff && group === "news";
+    const cell = document.createElement("div");
+    cell.className = "daycell" + (rec.isWeekend || rec.isHoliday ? " weekend" : "") +
+      (rec.isHoliday ? " holiday" : "") +
+      (rec.day === today.getDate() && m === today.getMonth() + 1 && y === today.getFullYear() ? " today" : "");
+    cell.innerHTML = `<div class="d">${rec.day}</div><div class="c">${code || '-'}</div>` +
+      (isBiweeklyOff ? `<div class="bw">오후휴무</div>` : "");
+    cell.style.cursor = "pointer";
+    cell.addEventListener("click", () => goToDateCheck(y, m, rec.day));
+    strip.appendChild(cell);
+  });
+}
+
+function goToDateCheck(y, m, day) {
+  document.getElementById("lookupDate").value = `${y}-${pad2(m)}-${pad2(day)}`;
+  renderDateResult();
+  switchTab("tab-date");
+}
+
+function populatePersonOptions(selectEl) {
+  selectEl.innerHTML = "";
+  Object.keys(GROUP_NAMES).forEach(group => {
+    GROUP_NAMES[group].forEach((name, idx) => {
+      const opt = document.createElement("option");
+      opt.value = `${group}:${idx}`;
+      opt.textContent = name;
+      selectEl.appendChild(opt);
+    });
+  });
+}
+
+function renderSettings() {
+  const y = Number(document.getElementById("settingsYearInput").value);
+  const m = Number(document.getElementById("settingsMonthNumSelect").value);
+  if (!y || !m) return;
+  const settings = getSettings(y, m);
+  document.getElementById("weekendNewsToggle").checked = settings.weekendNews;
+  document.getElementById("biweeklyToggle").checked = settings.biweeklyFridayOff;
+  const chips = document.getElementById("localHolidayChips");
+  chips.innerHTML = "";
+  settings.localHolidays.forEach(iso => {
+    const chip = document.createElement("span");
+    chip.className = "chip";
+    chip.innerHTML = `${iso} <button onclick="removeLocalHoliday('${iso}')" aria-label="삭제">&times;</button>`;
+    chips.appendChild(chip);
+  });
+}
+
+function addLocalHoliday() {
+  const val = document.getElementById("localHolidayDate").value;
+  if (!val) return;
+  const [y, m] = val.split("-").map(Number);
+  const settings = getSettings(y, m);
+  if (!settings.localHolidays.includes(val)) settings.localHolidays.push(val);
+  saveSettings(y, m, settings);
+  document.getElementById("settingsYearInput").value = y;
+  document.getElementById("settingsMonthNumSelect").value = m;
+  document.getElementById("localHolidayDate").value = "";
+  renderSettings();
+  renderMonthStrip();
+}
+function removeLocalHoliday(iso) {
+  const [y, m] = iso.split("-").map(Number);
+  const settings = getSettings(y, m);
+  settings.localHolidays = settings.localHolidays.filter(v => v !== iso);
+  saveSettings(y, m, settings);
+  renderSettings();
+  renderMonthStrip();
+}
+
+function populateMonthNumSelect(selectEl) {
+  selectEl.innerHTML = "";
+  for (let mo = 1; mo <= 12; mo++) {
+    const opt = document.createElement("option");
+    opt.value = mo;
+    opt.textContent = `${mo}월`;
+    selectEl.appendChild(opt);
+  }
+}
+
+function populateYearSelect(selectEl, startYear, endYear) {
+  selectEl.innerHTML = "";
+  for (let yr = startYear; yr <= endYear; yr++) {
+    const opt = document.createElement("option");
+    opt.value = yr;
+    opt.textContent = `${yr}년`;
+    selectEl.appendChild(opt);
+  }
+}
+
+document.getElementById("lookupDate").addEventListener("change", renderDateResult);
+document.getElementById("personSelect").addEventListener("change", renderMonthStrip);
+document.getElementById("settingsYearInput").addEventListener("change", renderSettings);
+document.getElementById("settingsMonthNumSelect").addEventListener("change", renderSettings);
+
+// 지정 휴일 날짜 선택기: 탭하면 월간 보기와 같은 달의 1일로 이동해서 열립니다.
+// (자동 취소 감지는 기종별로 동작이 달라 안정적이지 않아, 대신 "지우기" 버튼으로 직접 비울 수 있게 함)
+const holidayDateInput = document.getElementById("localHolidayDate");
+
+holidayDateInput.addEventListener("focus", (e) => {
+  if (!e.target.value) {
+    const y = viewState.year, m = viewState.month;
+    e.target.value = `${y}-${pad2(m)}-01`;
+  }
+});
+
+function clearHolidayDate() {
+  holidayDateInput.value = "";
+}
+
+document.getElementById("favoritePersonSelect").addEventListener("change", (e) => {
+  setFavoritePerson(e.target.value);
+  document.getElementById("personSelect").value = e.target.value;
+  renderMonthStrip();
+});
+document.getElementById("weekendNewsToggle").addEventListener("change", (e) => {
+  const y = Number(document.getElementById("settingsYearInput").value);
+  const m = Number(document.getElementById("settingsMonthNumSelect").value);
+  const settings = getSettings(y, m);
+  settings.weekendNews = e.target.checked;
+  saveSettings(y, m, settings);
+  renderMonthStrip();
+});
+document.getElementById("biweeklyToggle").addEventListener("change", (e) => {
+  const y = Number(document.getElementById("settingsYearInput").value);
+  const m = Number(document.getElementById("settingsMonthNumSelect").value);
+  const settings = getSettings(y, m);
+  settings.biweeklyFridayOff = e.target.checked;
+  saveSettings(y, m, settings);
+  renderMonthStrip();
+});
+
+// 초기화
+(function init() {
+  const today = new Date();
+  document.getElementById("lookupDate").value =
+    `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-${pad2(today.getDate())}`;
+  renderDateResult();
+
+  viewState.year = today.getFullYear();
+  viewState.month = today.getMonth() + 1;
+
+  populateYearSelect(document.getElementById("settingsYearInput"), today.getFullYear() - 10, today.getFullYear() + 30);
+  document.getElementById("settingsYearInput").value = today.getFullYear();
+  populateMonthNumSelect(document.getElementById("settingsMonthNumSelect"));
+  document.getElementById("settingsMonthNumSelect").value = today.getMonth() + 1;
+
+  populatePersonOptions(document.getElementById("personSelect"));
+  populatePersonOptions(document.getElementById("favoritePersonSelect"));
+  const fav = getFavoritePerson();
+  document.getElementById("personSelect").value = fav;
+  document.getElementById("favoritePersonSelect").value = fav;
+
+  renderMonthStrip();
+  renderSettings();
+})();
+</script>
+</body>
+</html>
