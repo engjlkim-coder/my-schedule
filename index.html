@@ -810,7 +810,9 @@ function buildPrintTableHTML(y, m, highlightFavorite) {
       data.forEach(rec => {
         const code = rec[key][idx];
         const display = code || (key === "news" ? "-" : "");
-        html += `<td class="${shadeCls(rec)}">${display}</td>`;
+        const isBiweeklyNews = key === "news" && rec.biweeklyOff;
+        const cellCls = shadeCls(rec) || (isBiweeklyNews ? "wk" : "");
+        html += `<td class="${cellCls}">${display}</td>`;
       });
       html += `</tr>`;
     });
